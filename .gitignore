@@ -1,0 +1,5 @@
+#Ignore debug logs and stuff
+Debug/
+
+#Ignore visual studio files
+VisualTools.vcxproj*
