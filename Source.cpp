@@ -1,6 +1,3 @@
-// HelloWindowsDesktop.cpp
-// compile with: /D_UNICODE /DUNICODE /DWIN32 /D_WINDOWS /c
-
 #define MAX(a, b, c) ((a > b) ? (a > c ? a : c) : (b > c ? b : c))
 #define MIN(a, b, c) ((a < b) ? (a < c ? a : c) : (b < c ? b : c))
 
@@ -96,27 +93,12 @@ int WINAPI WinMain(
 	GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
 	//Takes screenshot of screen and stores result in screenShot bitmap
-	HDC screenDC = GetDC(NULL);
+	HDC screenDC = GetDC(NULL); //Gets DC for the whole screen
 	HDC targetDC = CreateCompatibleDC(screenDC);
 	screenShot = CreateCompatibleBitmap(screenDC, WIDTH, HEIGHT);
 	SelectObject(targetDC, screenShot);
 	BitBlt(targetDC, 0, 0, WIDTH, HEIGHT, screenDC, 0, 0, SRCCOPY);
 	DeleteDC(targetDC); //we NEED to do this. If we don't do this, screenShot bmp is not available to display on the screen, since a bmp can only be held by one DC at a time
-
-	//Stores the "hidden" version of screen in hiddenShot
-
-	//targetDC = CreateCompatibleDC(screenDC);
-
-	//hiddenShot = (HBITMAP)CopyImage(screenShot, IMAGE_BITMAP, WIDTH, HEIGHT, LR_COPYFROMRESOURCE); //Copies original screen into hiddenShot
-
-	SelectObject(targetDC, hiddenShot); //Make targetDC use hiddenShot bmp
-
-	//Convert hiddenShot into a light version by painting over the targetDC
-	//Graphics graphics(targetDC);
-	//Pen pen(0x88FFFFFF);
-	//graphics.FillRectangle(&lightBrush, 0, 0, WIDTH, HEIGHT); //Make the whole screen light
-	//DeleteDC(targetDC);
-
 
 	//Stores the properly sized rectangle for us to have a client (display) area of size WIDTH x HEIGHT [Basically, gives us a window of WIDTH x HEIGHT excluding window borders]
 	RECT properRect = { 0, 0, WIDTH, HEIGHT };
@@ -186,17 +168,14 @@ void render(HDC hdc)
 	int y1 = min(Y1, Y2);
 	int y2 = max(Y1, Y2);
 
-	//graphics.FillRectangle(&lightBrush, 0, 0, WIDTH, HEIGHT); //Make the whole screen light
-
-	//graphics.FillRectangle(&darkBrush, x1, y1, x2 - x1, y2 - y1); //Darken our selection
 	graphics.DrawRectangle(&pen, x1, y1, x2 - x1 - 1, y2 - y1 - 1); //Draw red border around our selection
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
-	HDC hdc, bufferHDC, bufferHDC2, cropHDC, hiddenHDC;
-	HBITMAP bufferBMP, cropBMP, hiddenBMP;
+	HDC hdc, bufferHDC, cropHDC;
+	HBITMAP bufferBMP, cropBMP;
 	RECT rect = { STARTX, STARTY, WIDTH, HEIGHT };
 	TCHAR greeting[] = _T("Hello, Windows desktop!");
 	int mouseX, mouseY;
@@ -210,28 +189,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				case WM_PAINT:
 					hdc = BeginPaint(hWnd, &ps);
 					bufferHDC = CreateCompatibleDC(hdc);
-					hiddenHDC = CreateCompatibleDC(hdc);
 
 					//Copies screenShot to bufferHDC
 					bufferBMP = (HBITMAP)CopyImage(screenShot, IMAGE_BITMAP, WIDTH, HEIGHT, LR_COPYFROMRESOURCE);
 					SelectObject(bufferHDC, bufferBMP); //Sets bufferHDC to use bufferBMP
 
-					//Copies colored version of screen to cropHDC
-					//hiddenBMP = (HBITMAP)CopyImage(screenShot, IMAGE_BITMAP, WIDTH, HEIGHT, LR_COPYFROMRESOURCE); //Copies original version of the screen, that is, screenShot into cropBMP
-					//SelectObject(hiddenHDC, hiddenBMP);
-
-					/*x1 = min(X1, X2);
-					x2 = max(X1, X2);
-					y1 = min(Y1, Y2);
-					y2 = max(Y1, Y2);*/
-
-					//BitBlt(bufferHDC, x1, y1, x2 - x1, y2 - y1, hiddenHDC, x1, y1, SRCCOPY); //Copies the part user has selected from cropHDC to bufferHDC
-
 					render(bufferHDC); //Draws what we want onto bufferHDC, which is using bufferBMP rn
 
 					BitBlt(hdc, 0, 0, WIDTH, HEIGHT, bufferHDC, STARTX, STARTY, SRCCOPY); //Copy result image from bufferHDC to hdc
 
-					DeleteDC(hiddenHDC);
 					DeleteDC(bufferHDC); //we NEED to do this. If we don't do this, screenShot bmp is held by the previous bufferHDC, and thus the screenShot is not drawn again when our window is modified. You can see the effects of this by commenting out this line and re-sizing the window
 					DeleteBitmap(bufferBMP); //We need to do this otherwise a lot of bitmaps get accumulated from repeated calling of InvalidateRect()
 					EndPaint(hWnd, &ps);
@@ -319,4 +285,3 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 	return 0;
 }
-
